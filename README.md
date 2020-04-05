@@ -1,3 +1,1 @@
-Implementing AI model to predict probability of default.
-The idea is to develop a machine learning model using Neural Networks to predict probability of default of firms. The methodology used is the "public good approach" followed by RMI National University of Singapore, as described in the technical report.
-
+A model to find piotroski's f-score for BSE listed firms. The model takes data from moneycontrol.com and list of equities from BSE Website
