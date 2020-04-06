@@ -1,11 +1,10 @@
-
+#!/usr/bin/env python
 # coding: utf-8
-
-
 
 ##Calculating Piotroski's F score
 import numpy as np
 import pandas as pd
+from tabula import read_pdf as rp
 from bs4 import BeautifulSoup as bs
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -14,9 +13,6 @@ import time
 import sys
 import argparse
 
-
-
-
 ## setting up browser ##returns driver
 def browser_setup():
     url="https://www.moneycontrol.com/stocksmarketsindia/"
@@ -24,7 +20,6 @@ def browser_setup():
     chrome_options.add_argument('--window-size=1920,1080');
     chrome_options.add_argument('--blink-settings=imagesEnabled=false')
     chrome_options.add_argument("--headless")
-    chrome_options.binary_location = 'C:/Users/Harshit Mishra/AppData/Local/Google/Chrome SxS/Application/chrome.exe'    
     driver = webdriver.Chrome(executable_path=os.path.abspath("chromedriver"),options=chrome_options)  
     driver.get(url)
     driver.implicitly_wait(5)
@@ -32,11 +27,9 @@ def browser_setup():
     return driver
 
 
-
-
 ##Loading excel to connect security ticker to bse code
-def sec_id(security_ticker):
-    sheet=pd.read_csv("Equity.csv");
+def sec_id(bse_scripts,security_ticker):
+    sheet=pd.read_csv(bse_scripts);
     row=sheet[sheet["Security Id"]==security_ticker]
     if(row.shape[0]==0):
         code = "Invalid Ticker"
@@ -48,6 +41,8 @@ def sec_id(security_ticker):
 
 
 
+##Download list of securities for the day from https://www.bseindia.com/corporates/List_Scrips.aspx and save it in the folder with the py file
+
 
 #to put security's bse code in search bar and open its page
 def gotosecurity(code,driver):
@@ -58,8 +53,6 @@ def gotosecurity(code,driver):
     go.click();
     time.sleep(5);
     print("Opened security page")
-
-
 
 
 ##get links to financial statements
@@ -80,8 +73,6 @@ def getlinks(driver):
     return statement_links;
 
 
-
-
 def getbs(driver,bs_link):
     driver.get(bs_link);
     time.sleep(5);
@@ -93,8 +84,6 @@ def getbs(driver,bs_link):
                     val=val.append([data.get_attribute('textContent')],ignore_index=True);
                 values=values.append(val.T,ignore_index=True)
     return values   
-
-
 
 
 def getpnl(driver,pnl_link):
@@ -111,7 +100,6 @@ def getpnl(driver,pnl_link):
 
 
 
-
 def getcf(driver,cf_link):
     driver.get(cf_link);
     time.sleep(5);
@@ -123,7 +111,6 @@ def getcf(driver,cf_link):
                     val=val.append([data.get_attribute('textContent')],ignore_index=True);
                 values=values.append(val.T,ignore_index=True)
     return values    
-
 
 
 
@@ -145,10 +132,9 @@ def getyr(driver,yr_link):
 
 
 
-
-def get_statements(security_ticker):
+def get_statements(security_ticker,bse_scripts):
     security_ticker=security_ticker.upper()
-    code = sec_id(security_ticker);
+    code = sec_id(bse_scripts,security_ticker);
     driver=browser_setup();
     gotosecurity(code,driver); #Opens security page in driver
     statement_links=getlinks(driver);
@@ -180,16 +166,12 @@ def get_statements(security_ticker):
             yr.loc[yr[i-1]=="0.00",i-1]=yr[yr[i-1]=="0.00"][i]
             yr=yr.drop(labels=i,axis=1);
             yr.columns=range(yr.shape[1]);
-    print("extracted statements")
+    print("extracted statements\n")
     statements=[bs,pnl,cf,yr];
     return statements;
 
 
-
-
 ################ Get financial Statements upto here #####################################
-
-
 
 
 ##Defining required variables for Pietroskei ratios
@@ -294,10 +276,9 @@ def pet_rat(bs,pnl,cf,yr):
     ass_turn_0 = revenue_gross_0/TA_1;
     ass_turn_1 = revenue_gross_1/TA_2;
     del_ass_turn= ass_turn_0-ass_turn_1;
-    ratios = [roa_0,cfra,del_roa,accurals,del_lev,del_liq,del_eq,del_gross_margin,del_ass_turn];
+    #ratios = [roa_0,cfra,del_roa,accurals,del_lev,del_liq,del_eq,del_gross_margin,del_ass_turn];
+    ratios = pd.DataFrame({'Category': ['RoA', 'CFRA','Delta RoA','Accurals','Delta Leverage','Delta Liquidity','Equity Issued in year','Delta Gross Margin','Delta Asset Turnover'], 'ratio': [roa_0,cfra,del_roa,accurals,del_lev,del_liq,del_eq,del_gross_margin,del_ass_turn]})
     return ratios;
-
-
 
 
 ##Calculating Petroski's ratios
@@ -305,19 +286,19 @@ def pet_rat(bs,pnl,cf,yr):
 def petroski_ratios(ratios):
 # 1) Profitability ratios
 #roa
-    roa = ratios[0];
+    roa = ratios.iloc[0,1];
     if(roa>0):f_roa=1;
     else: f_roa=0;
 #cfra = Net cash flow from operating activities/Total Assets from the beginning of the year
-    cfra = ratios[1]
+    cfra = ratios.iloc[1,1]
     if(cfra>0):f_cfra=1;
     else:f_cfra=0;
 #delta roa
-    del_roa=ratios[2];
+    del_roa=ratios.iloc[2,1];
     if(del_roa>0): f_del_roa=1;
     else: f_del_roa=0;
 #accurals net cash flow - net operating income/Total assets from the beginning of the year
-    accurals = ratios[3];
+    accurals = ratios.iloc[3,1];
     if(accurals>0): f_accurals=0;
     else: f_accurals=1;
     
@@ -326,15 +307,15 @@ def petroski_ratios(ratios):
 # 2) Capital Structure Measures
 #delta leverage
 
-    del_lev = ratios[4]
+    del_lev = ratios.iloc[4,1]
     if(del_lev<0): f_del_lev=1;
     else: f_del_lev=0;
 # delta liquidity
-    del_liq = ratios[5];
+    del_liq = ratios.iloc[5,1];
     if(del_liq>0): f_del_liq=1;
     else: f_del_liq=0;
 #del_share_issue
-    del_eq=ratios[6];
+    del_eq=ratios.iloc[6,1];
     if(del_eq>0): f_del_eq=0;
     else: f_del_eq=1;
         
@@ -342,11 +323,11 @@ def petroski_ratios(ratios):
 
 # 3) Efficiency Measures
 #Delta gross margin
-    del_gross_margin = ratios[7];
+    del_gross_margin = ratios.iloc[7,1];
     if(del_gross_margin>0): f_del_gross_margin=1;
     else: f_del_gross_margin=0;
 #Delta Asset Turnover
-    del_ass_turn = ratios[8];
+    del_ass_turn = ratios.iloc[8,1];
     if(del_ass_turn>0): f_del_ass_turn=1;
     else: f_del_ass_turn=0;
     
@@ -358,9 +339,9 @@ def petroski_ratios(ratios):
 
 
 
-
-def calfscore(secticker): 
-    statements=get_statements(secticker);
+def calfscore(secticker):
+    bse_scripts = input("Address of Select.csv file: ");
+    statements=get_statements(secticker,bse_scripts);
     bs=statements[0];
     pnl=statements[1];
     cf= statements[2];
@@ -368,7 +349,6 @@ def calfscore(secticker):
     ratios=pet_rat(bs,pnl,cf,yr);
     score = petroski_ratios(ratios);
     return [score,ratios]
-
 
 
 def main():
@@ -379,7 +359,8 @@ def main():
     [fscore,ratios]=calfscore(args.bse_ticker);
     for i,row in fscore.iterrows():
     	print(row['Category'],' - ',row['f score'])
-
-
 if __name__ == '__main__':
     main()
+
+
+
