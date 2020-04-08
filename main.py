@@ -4,8 +4,6 @@
 ##Calculating Piotroski's F score
 import numpy as np
 import pandas as pd
-from tabula import read_pdf as rp
-from bs4 import BeautifulSoup as bs
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import os
