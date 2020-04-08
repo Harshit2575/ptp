@@ -1,7 +1,9 @@
 A model to find piotroski's f-score for BSE listed firms. The model takes data from moneycontrol.com and list of equities from BSE Website.
 
 Requirements for using py/ipynb: 
--- Selenium should be installed
+-- Install selenium using the command in command prompt
+pip install selenium
+
 -- Google Chrome should be installed
 
 -- Download bse securities list from https://www.bseindia.com/corporates/List_Scrips.aspx
